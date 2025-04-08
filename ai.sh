@@ -1,34 +1,91 @@
 #!/bin/bash
 
-mode="You are an AI model that needs to give short and concise answers."
+mode="You are a friendly AI model that needs to give short and concise answers."
 LOG_PATH="/home/mario/logs/ai.log"
+CONTEXT=$(<"$LOG_PATH")
+FLAG_PRESENT=false
 
+clear_all() {
+  > "$LOG_PATH"
+    echo "AI conversation history has been cleared."
+}
 
+check_mutual_exclusiveness() {
+  if [[ "$FLAG_PRESENT" == true ]]; then
+    echo "Flags must be mutually exclusive!"
+    exit 1
+  fi
+
+  FLAG_PRESENT=true
+}
 
 # Parse flags
-while getopts ":slch" opt; do
+while getopts ":cslh" opt; do
   case $opt in
     s)
-      mode="You are an AI model that needs to give short and concise answers."
+      check_mutual_exclusiveness
+      mode="You are a friendly AI model that needs to give short and concise answers."
       ;;
     l)
+      check_mutual_exclusiveness
       mode="You are an AI model that needs to give long and detailed answers."
       ;;
     c)
-      > "$LOG_PATH"
-      echo "AI conversation history has been cleared."
+      check_mutual_exclusiveness
+      if [[ -z "$2" ]]; then # If -c is used with no arguments
+        clear_all
+
+      elif [[ ! "$2" =~ ^[0-9]+$ ]]; then # If -c is used with bad arguments
+        echo "Error: -c option requires a valid number."
+        exit 1
+
+      else # If -c is used with a number argument
+        clear_count="$2"
+        #clear_count=$((clear_count * 2))
+
+        # Turn the log file into a JSON array
+        CONTEXT=${CONTEXT%,}
+        CONTEXT="[$CONTEXT]"
+        
+        # Remove first clear_count elements from the array
+        array_length=$(echo "$CONTEXT" | jq 'length')
+        
+        if [[ $clear_count -ge $array_length ]]; then
+          clear_all
+
+        else 
+          CONTEXT=$(echo "$CONTEXT" | jq ".[$clear_count:]")
+
+          # Format it back
+          CONTEXT=${CONTEXT%]}   
+          CONTEXT=${CONTEXT#[}
+          CONTEXT="$CONTEXT,"
+
+          echo "$CONTEXT" > "$LOG_PATH"
+
+          echo "Cleared the first $clear_count messages from the conversation."
+        
+        fi
+      fi
+      
       exit 0
-      ;;
+    ;;
     h)
-      echo "Usage: $0 [-s | -l | -c | -h] <Your prompt here>"
+      check_mutual_exclusiveness
+      echo "Usage: $0 [-s | -l | -c <number>] [-h]"
       echo
       echo "Flags:"
       echo "  -s    Short answer (default)"
       echo "  -l    Long and detailed answer"
-      echo "  -c    Clear conversation history"
+      echo "  -c    Clear conversation history. Optionally, provide a number to clear a specific number of messages from the start. If no number is provided, it deletes all conversation history."
       echo "  -h    Show this help message"
+      echo
+      echo "Note: All flags are mutually exclusive. You can only use one of -s, -l, -c, or -h at a time."
+      echo "      The prompt is only allowed after the flags -s or -l. It should not be provided after -c or -h."
       exit 0
       ;;
+
+
     \?)
       echo "Invalid option: -$OPTARG"
       exit 1
@@ -61,7 +118,6 @@ fi
 
 
 PROMPT="$@"
-CONTEXT=$(<"$LOG_PATH")
 
 
 REQUEST_BODY=$(cat <<EOF
