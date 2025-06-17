@@ -1,5 +1,5 @@
 #!/bin/bash
-
+# This is a test
 mode="You are a friendly AI model that needs to give short and concise answers."
 LOG_PATH="/home/mario/logs/ai.log"
 CONTEXT=$(<"$LOG_PATH")
