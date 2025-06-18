@@ -1,7 +1,13 @@
 #!/bin/bash
 # This is a test
 mode="You are a friendly AI model that needs to give short and concise answers."
-LOG_PATH="/home/mario/logs/ai.log"
+
+# Relative path
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )" 
+
+
+LOG_PATH="$SCRIPT_DIR/.log"
+
 CONTEXT=$(<"$LOG_PATH")
 FLAG_PRESENT=false
 
@@ -135,7 +141,10 @@ if [ "$#" -eq 0 ]; then
   exit 1
 fi
 
-source ~/envs/gemini.env
+
+# Get gemini env key from relative path
+source "$SCRIPT_DIR/gemini.env"
+
 if [ -z "$GEMINI_API_KEY" ]; then
   echo "Error: GEMINI_API_KEY not set"
   exit 1
