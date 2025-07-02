@@ -1,21 +1,48 @@
 #!/bin/bash
-# This is a test
-mode="You are a friendly AI model that needs to give short and concise answers."
 
-# Relative path
-SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )" 
+#---------------------------------------------------------------------------------------------
+# Message Functions
 
+count_messages() {
+  CONTEXT=$(format_to_json "$CONTEXT")
+  array_length=$(echo "$CONTEXT" | jq 'length')
 
-LOG_PATH="$SCRIPT_DIR/.log"
+  echo $array_length
 
-CONTEXT=$(<"$LOG_PATH")
-FLAG_PRESENT=false
+}
+
 
 clear_all() {
   > "$LOG_PATH"
     echo "AI conversation history has been cleared."
 }
 
+clear_messages() {
+
+  clear_count=$1
+  
+  # Remove all elements if clear_count value is too big
+  if [[ $clear_count -ge $(count_messages) ]]; then
+    clear_all
+
+  # Remove first clear_count elements from the array
+  else 
+
+    CONTEXT=$(echo "$(format_to_json "$CONTEXT")" | jq ".[$clear_count:]")
+
+    # Format it back
+    CONTEXT=$(format_from_json "$CONTEXT")
+
+    echo "$CONTEXT" > "$LOG_PATH"
+
+    echo "Cleared the first $clear_count messages from the conversation."
+  
+  fi
+}
+
+
+#-------------------------------------------------------------------------------------------
+# Arg function
 check_mutual_exclusiveness() {
   if [[ "$FLAG_PRESENT" == true ]]; then
     echo "Flags must be mutually exclusive!"
@@ -25,6 +52,9 @@ check_mutual_exclusiveness() {
   FLAG_PRESENT=true
 }
 
+
+#------------------------------------------------------------------------------------------
+# JSON functions
 format_to_json() {
   local txt=$1
 
@@ -44,7 +74,29 @@ format_from_json() {
 
   echo "$txt"
 }
+#-------------------------------------------------------------------------------------
 
+
+# START
+
+
+#-------------------------------------------------------------------------------------
+
+# Define global values
+mode="You are a friendly AI model that needs to give short and concise answers."
+
+# Relative path
+SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
+
+
+LOG_PATH="$SCRIPT_DIR/.log"
+
+CONTEXT=$(<"$LOG_PATH")
+FLAG_PRESENT=false
+
+
+
+#-------------------------------------------------------------------------------------
 # Parse flags
 while getopts ":cslhn" opt; do
   case $opt in
@@ -58,10 +110,8 @@ while getopts ":cslhn" opt; do
       ;;
     n)
       check_mutual_exclusiveness
-      CONTEXT=$(format_to_json "$CONTEXT")
-        
-      array_length=$(echo "$CONTEXT" | jq 'length')
-      echo "Your conversation has $array_length messages."
+
+      echo "Your conversation has $(count_messages) messages."
       exit 0
     ;;
     c)
@@ -75,33 +125,15 @@ while getopts ":cslhn" opt; do
 
       else # If -c is used with a number argument
         clear_count="$2"
-        #clear_count=$((clear_count * 2))
+        clear_messages "$clear_count"
 
-        # Turn the log file into a JSON array
-        CONTEXT=$(format_to_json "$CONTEXT")
-        
-        array_length=$(echo "$CONTEXT" | jq 'length')
-        
-        # Remove all elements if clear_count value is too big
-        if [[ $clear_count -ge $array_length ]]; then
-          clear_all
-
-        # Remove first clear_count elements from the array
-        else 
-          CONTEXT=$(echo "$CONTEXT" | jq ".[$clear_count:]")
-
-          # Format it back
-          CONTEXT=$(format_from_json "$CONTEXT")
-
-          echo "$CONTEXT" > "$LOG_PATH"
-
-          echo "Cleared the first $clear_count messages from the conversation."
-        
-        fi
       fi
       
       exit 0
     ;;
+
+
+
     h)
       check_mutual_exclusiveness
       echo "Usage: $0 [-s | -l <PROMPT> ] [-h | -c <number> | -n]"
@@ -128,7 +160,7 @@ done
 shift $((OPTIND -1))
 
 
-
+#-----------------------------------------------------------------------------------------
 # Start error cases
 if [[ "$@" == *"-s"* && "$@" == *"-l"* ]]; then
   echo "Error: -s and -l are mutually exclusive."
@@ -141,7 +173,6 @@ if [ "$#" -eq 0 ]; then
   exit 1
 fi
 
-
 # Get gemini env key from relative path
 source "$SCRIPT_DIR/gemini.env"
 
@@ -151,8 +182,9 @@ if [ -z "$GEMINI_API_KEY" ]; then
 fi
 # End error cases
 
+#------------------------------------------------------------------------------------------
 
-
+# Get remaining arguments (the prompt) and send them to Gemini API.
 PROMPT="$@"
 
 
