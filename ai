@@ -96,69 +96,75 @@ CONTEXT=$(<"$LOG_PATH")
 FLAG_PRESENT=false 
 
 
-
 #-------------------------------------------------------------------------------------
 # Parse flags
-while getopts ":cslhn" opt; do
-  case $opt in
-    s)
+
+params="$(getopt -o :cslhn -l config --name "$0" -- "$@")"
+
+eval set -- "$params"
+
+
+while true
+do
+  case "$1" in
+      -s)
       check_mutual_exclusiveness
       mode="You are a friendly AI model that needs to give short and concise answers."
+      shift
       ;;
-    l)
-      check_mutual_exclusiveness
-      mode="You are an AI model that needs to give long and detailed answers."
+      -l)
+        check_mutual_exclusiveness
+        mode="You are an AI model that needs to give long and detailed answers."
+        shift
+        ;;
+      -n)
+        check_mutual_exclusiveness
+
+        echo "Your conversation has $(count_messages) messages."
+        exit 0
       ;;
-    n)
-      check_mutual_exclusiveness
+      -c)
+        check_mutual_exclusiveness
+        if [[ -z "$2" ]]; then # If -c is used with no arguments
+          clear_all
 
-      echo "Your conversation has $(count_messages) messages."
-      exit 0
-    ;;
-    c)
-      check_mutual_exclusiveness
-      if [[ -z "$2" ]]; then # If -c is used with no arguments
-        clear_all
+        elif [[ ! "$2" =~ ^[0-9]+$ ]]; then # If -c is used with bad arguments
+          echo "Error: -c option requires a valid number."
+          exit 1
 
-      elif [[ ! "$2" =~ ^[0-9]+$ ]]; then # If -c is used with bad arguments
-        echo "Error: -c option requires a valid number."
-        exit 1
+        else # If -c is used with a number argument
+          clear_count="$2"
+          clear_messages "$clear_count"
 
-      else # If -c is used with a number argument
-        clear_count="$2"
-        clear_messages "$clear_count"
+        fi
+        
+        exit 0
+      ;;
 
-      fi
+
+      -h)
+        check_mutual_exclusiveness
+        cat "$SCRIPT_DIR/help.txt"
+        exit 0
+      ;;
       
-      exit 0
-    ;;
+      --)
+        shift
+        break
+      ;;
+      
+      *)
+        echo "Not implemented: $1" >&2
+        exit 1
+      ;;
 
-
-
-    h)
-      check_mutual_exclusiveness
-      echo "Usage: $0 [-s | -l <PROMPT> ] [-h | -c <number> | -n]"
-      echo
-      echo "Flags:"
-      echo "  -s    Short answer (default)"
-      echo "  -l    Long and detailed answer. You must provide a prompt after this flag."
-      echo "  -c    Clear conversation history. Optionally, provide a number to clear a specific number of messages from the start. If no number is provided, it deletes all conversation history."
-      echo "  -n    Show the number of messages in the conversation."
-      echo "  -h    Show this help message"
-      echo
-      echo "Note: All flags are mutually exclusive. You can only use one of -s, -l, -c, or -h at a time."
-      echo "      The prompt is only allowed after the flags -s or -l. It should not be provided after -c or -h."
-      exit 0
-    ;;
-
-
-    \?)
-      echo "Invalid option: -$OPTARG"
-      exit 1
-    ;;
   esac
+
+
+
 done
-shift $((OPTIND -1))
+
+ 
 
 
 #-----------------------------------------------------------------------------------------
