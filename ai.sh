@@ -86,7 +86,7 @@ mode="You are a friendly AI model that needs to give short and concise answers."
 CONTEXT=$(<"$LOG_PATH")
 
 # Conversation history limit
-MESSAGE_LIMIT=10
+MESSAGE_LIMIT=6
 
 # For checking mutual exclusiveness
 FLAG_PRESENT=false 

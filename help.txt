@@ -1,0 +1,13 @@
+
+Usage: $0 [-s | -l <PROMPT> ] [-h | -c <number> | -n]
+
+Flags:
+  -s    Short answer (default)
+  -l    Long and detailed answer. You must provide a prompt after this flag.
+  -c    Clear conversation history. Optionally, provide a number to clear a specific number of messages from the start. If no number is provided, it deletes all conversation history.
+  -n    Show the number of messages in the conversation.
+  -h    Show this help message
+
+Note: All flags are mutually exclusive. You can only use one of -s, -l, -c, or -h at a time.
+      The prompt is only allowed after the flags -s or -l. It should not be provided after -c or -h.
+
